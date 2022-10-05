@@ -1,6 +1,8 @@
-from binaryninja import Architecture, RegisterInfo, InstructionInfo
+from binaryninja import Architecture, RegisterInfo, InstructionInfo, lowlevelil
 
 from typing import Tuple
+
+from .lifting import Lifter
 from .disassembler import Disassembler
 
 class Python(Architecture):
@@ -14,6 +16,7 @@ class Python(Architecture):
     def __init__(self):
         super().__init__()
         self.disassembler = Disassembler()
+        self.lifter = Lifter()
 
 
     def get_instruction_info(self, data: bytes, addr: int) -> InstructionInfo:
@@ -30,5 +33,8 @@ class Python(Architecture):
         return self.disassembler.get_instruction_text(data, addr)
 
 
-    def get_instruction_low_level_il(self, data, addr, il):
-        return None
+    def get_instruction_low_level_il(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction):
+        if not data:
+            return None
+        
+        return self.lifter.lift(data, addr, il)
