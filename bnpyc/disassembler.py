@@ -57,7 +57,11 @@ class Disassembler:
         elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
             i_info.add_branch(BranchType.UnconditionalBranch, target=addr+data[1]*2)
         
-        elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
+        elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
+            i_info.add_branch(BranchType.TrueBranch, target=addr+2)
+            i_info.add_branch(BranchType.FalseBranch, target=data[1])
+
+        elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=data[1])
             i_info.add_branch(BranchType.FalseBranch, target=addr+2)
         
@@ -202,8 +206,9 @@ class Disassembler:
 
     def _index_of(self, addr: int) -> int:
         for i, f in enumerate(self.bv.functions):
-            if addr in f.address_ranges[0]:
-                return i
+            for addr_range in f.address_ranges:
+                if addr in addr_range:
+                    return i
         
         raise Exception('no no no')
 
