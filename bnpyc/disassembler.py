@@ -105,7 +105,7 @@ class Disassembler:
         if opcode in self.opcodes.hasname:
             value = self.get_name_at(data[1], addr) 
             tokens.append(
-                InstructionTextToken(InstructionTextTokenType.ArgumentNameToken, value)
+                InstructionTextToken(InstructionTextTokenType.ArgumentNameToken, f'"{value[:50]}"')
             )
         
         elif opcode in self.opcodes.hasconst:
@@ -159,7 +159,7 @@ class Disassembler:
             ),
         elif isinstance(value, str):
             return InstructionTextToken(
-                InstructionTextTokenType.CharacterConstantToken, value
+                InstructionTextTokenType.CharacterConstantToken, f'"{value[:50]}"'
             ),
         elif value is None:
             return InstructionTextToken(
@@ -175,7 +175,7 @@ class Disassembler:
             ),
         
         return InstructionTextToken(
-            InstructionTextTokenType.CodeSymbolToken, f'{str(type(value))[:50]}' 
+            InstructionTextTokenType.DataSymbolToken, f'{str(type(value))[:50]}' 
         ), InstructionTextToken(
             InstructionTextTokenType.TextToken, ' '
         ), InstructionTextToken(
@@ -211,4 +211,10 @@ class Disassembler:
                     return i
         
         raise Exception('no no no')
+
+
+    def get_nop(self) -> bytes:
+        self.setup()
+
+        return bytes([self.opcodes.NOP, 0])
 

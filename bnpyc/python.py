@@ -1,6 +1,6 @@
 from binaryninja import Architecture, RegisterInfo, InstructionInfo, lowlevelil
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 from .lifting import Lifter
 from .disassembler import Disassembler
@@ -38,3 +38,10 @@ class Python(Architecture):
             return None
         
         return self.lifter.lift(data, addr, il)
+
+
+    def convert_to_nop(self, data: bytes, addr: int = 0) -> Optional[bytes]:
+        if not data:
+            return None
+        
+        return self.disassembler.get_nop()
