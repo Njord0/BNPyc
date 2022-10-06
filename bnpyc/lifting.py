@@ -13,7 +13,7 @@ class Lifter:
     def set_bv(self) -> bool:    
         ac = UIContext.activeContext()
         if ac is None:
-            return False
+            ac = UIContext.allContexts()[0]
 
         cv = ac.getCurrentViewFrame()
         if cv is None:
