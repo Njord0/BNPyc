@@ -163,21 +163,25 @@ class Disassembler:
             return InstructionTextToken(
                 InstructionTextTokenType.IntegerToken, f'{value}'[:50]
             ),
+        elif isinstance(value, float):
+            return InstructionTextToken(
+                InstructionTextTokenType.FloatingPointToken, f'{value}'[:50]
+            ),
         elif isinstance(value, str):
             return InstructionTextToken(
                 InstructionTextTokenType.CharacterConstantToken, f'"{value[:50]}"'
-            ),
-        elif value is None:
-            return InstructionTextToken(
-                InstructionTextTokenType.CodeSymbolToken, 'None'
             ),
         elif isinstance(value, bytes):
             return InstructionTextToken(
                 InstructionTextTokenType.CharacterConstantToken, f'{value}'[:50]
             ),
-        elif isinstance(value, tuple):
+        elif isinstance(value, tuple) or isinstance(value, list):
             return InstructionTextToken(
                 InstructionTextTokenType.StringToken, f'{value}'[:50]
+            ),
+        elif value is None:
+            return InstructionTextToken(
+                InstructionTextTokenType.DataSymbolToken, 'None'
             ),
         
         return InstructionTextToken(
