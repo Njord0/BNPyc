@@ -34,10 +34,7 @@ class Python(Architecture):
 
 
     def get_instruction_low_level_il(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction):
-        if not data:
-            return None
-        
-        return self.lifter.lift(data, addr, il)
+        return None
 
 
     def convert_to_nop(self, data: bytes, addr: int = 0) -> Optional[bytes]:
@@ -45,3 +42,10 @@ class Python(Architecture):
             return None
         
         return self.disassembler.get_nop()
+
+
+    def invert_branch(self, data: bytes, addr: int = 0) -> Optional[bytes]:
+        if not data:
+            return None
+        
+        return self.disassembler.invert_branch(data, addr)

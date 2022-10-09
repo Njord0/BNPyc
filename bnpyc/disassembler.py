@@ -119,6 +119,12 @@ class Disassembler:
                 InstructionTextToken(InstructionTextTokenType.CharacterConstantToken, value)
             )
 
+        elif opcode == self.opcodes.COMPARE_OP:
+            op = self.opcodes.cmp_op[data[1]]
+            tokens.append(
+                InstructionTextToken(InstructionTextTokenType.KeywordToken, ' ' + op)
+            )
+
         return tokens, instruction.length
 
 
@@ -209,7 +215,7 @@ class Disassembler:
             for addr_range in f.address_ranges:
                 if addr in addr_range:
                     return i
-        
+
         raise Exception('no no no')
 
 
@@ -217,4 +223,26 @@ class Disassembler:
         self.setup()
 
         return bytes([self.opcodes.NOP, 0])
+
+
+    def invert_branch(self, data: bytes, addr: int) -> bytes:
+        opname = self.opcodes.opname[data[0]]
+
+        if opname in ('JUMP_ABSOLUTE', 'JUMP_FORWARD'):
+            return self.get_nop()
+
+        elif opname == 'POP_JUMP_IF_FALSE':
+            return bytes([self.opcodes.opmap['POP_JUMP_IF_TRUE'], data[1]])
+
+        elif opname == 'POP_JUMP_IF_TRUE':
+            return bytes([self.opcodes.opmap['POP_JUMP_IF_FALSE'], data[1]])
+
+        elif opname == 'JUMP_IF_FALSE_OR_POP':
+            return bytes([self.opcodes.opmap['JUMP_IF_TRUE_OR_POP'], data[1]])
+
+        elif opname == 'JUMP_IF_TRUE_OR_POP':
+            return bytes([self.opcodes.opmap['JUMP_IF_FALSE_OR_POP'], data[1]])
+
+        return None
+
 
