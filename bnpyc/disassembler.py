@@ -67,7 +67,7 @@ class Disassembler:
         
         elif self.opcodes.opname[opcode] == 'FOR_ITER':
             i_info.add_branch(BranchType.TrueBranch, addr+2)
-            i_info.add_branch(BranchType.FalseBranch, addr + 2 * data[1] - 2)
+            i_info.add_branch(BranchType.FalseBranch, addr + data[1])
         
         elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
             i_info.add_branch(BranchType.FunctionReturn)
@@ -134,23 +134,23 @@ class Disassembler:
 
         if opname == 'JUMP_ABSOLUTE':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}'
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
         elif opname == 'JUMP_FORWARD':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}'
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
             )
         elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}'
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
             )
         elif opname == 'FOR_ITER':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(addr + 2 * x - 2)}'
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
             )
         elif opname == 'SETUP_FINALLY':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}'
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
             )
 
         return None # should not occur
