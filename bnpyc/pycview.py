@@ -49,7 +49,7 @@ class PycView(BinaryView):
         self.tmpfile = tempfile.NamedTemporaryFile('r+b') # read write binary mode
         self.tmpfile.write(self.pycinfo.co.co_code)
         self.tmpfile.flush()
-        self.offsets = [0, ] # first function offset
+        self.funcs = [("", 0), ] # first function offset
 
 
     def _get_view(self) -> BinaryView:
@@ -71,8 +71,9 @@ class PycView(BinaryView):
         )
 
         self.tmpfile.seek(0)
-        for offset in self.offsets:
-            self.create_user_function(offset)
+        for name, offset in self.funcs:
+            func = self.create_user_function(offset)
+            func.name = name if name else func.name
 
         ## Adding objects
         with StructureBuilder.builder(self, 'object') as object_info:
@@ -124,7 +125,7 @@ class PycView(BinaryView):
         out = []
         for c in code.co_consts:
             if self._is_code(c):
-                self.offsets.append(self.tmpfile.tell())
+                self.funcs.append((c.co_name, self.tmpfile.tell()))
                 self.tmpfile.write(c.co_code)
                 self.tmpfile.flush()
                 out.append(PycInfo(co = c))

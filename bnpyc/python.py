@@ -1,6 +1,6 @@
-from binaryninja import Architecture, RegisterInfo, InstructionInfo, lowlevelil
+from binaryninja import Architecture, RegisterInfo, InstructionInfo, InstructionTextToken, lowlevelil
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from .lifting import Lifter
 from .disassembler import Disassembler
@@ -26,12 +26,13 @@ class Python(Architecture):
         return self.disassembler.disasm(data, addr)
 
 
-    def get_instruction_text(self, data, addr) -> Tuple[str, int]:
+    def get_instruction_text(self, data, addr) -> Tuple[List[InstructionTextToken], int]:
         if not data:
             return None
-
-        return self.disassembler.get_instruction_text(data, addr)
-
+        try:
+            return self.disassembler.get_instruction_text(data, addr)
+        except IndexError:
+            return [], 2
 
     def get_instruction_low_level_il(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction):
         return None
