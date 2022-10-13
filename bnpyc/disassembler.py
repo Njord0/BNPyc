@@ -10,6 +10,7 @@ from .pycview import PycInfo
 class Disassembler:
     def __init__(self):
         self.bv: BinaryView = None
+        self.loaded_function_names: List[str] = []
 
 
     def set_bv(self) -> bool:    
@@ -103,7 +104,12 @@ class Disassembler:
         )
 
         if opcode in self.opcodes.hasname:
-            value = self.get_name_at(data[1], addr) 
+            value = self.get_name_at(data[1], addr)
+            if (opname == 'LOAD_NAME' or opname == 'LOAD_GLOBAL') and len(self.bv.get_functions_by_name(value)) != 0:
+                self.loaded_function_names.append(value)
+            elif opname == 'LOAD_METHOD':
+                self.loaded_function_names.append(value)
+
             tokens.append(
                 InstructionTextToken(InstructionTextTokenType.ArgumentNameToken, f'"{value[:50]}"')
             )
@@ -124,6 +130,16 @@ class Disassembler:
             tokens.append(
                 InstructionTextToken(InstructionTextTokenType.KeywordToken, ' ' + op)
             )
+
+        if opname in ('CALL_FUNCTION', 'CALL_FUNCTION_EX', 'CALL_FUNCTION_KW', 'CALL_METHOD') and self.loaded_function_names:
+            try:
+                tokens.append(
+                    InstructionTextToken(InstructionTextTokenType.DataSymbolToken, self.loaded_function_names[-1],
+                        self.bv.get_functions_by_name(self.loaded_function_names[-1])[0].lowest_address)
+                )
+                self.loaded_function_names.pop()
+            except IndexError: # no such function name
+                pass
 
         return tokens, instruction.length
 
