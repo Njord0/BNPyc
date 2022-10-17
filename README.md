@@ -23,7 +23,7 @@ Clone this repository and install requirements :
 </details>
 
 <details>
-    <summary>Linux</summary>
+    <summary>Darwin</summary>
     
     git clone https://github.com/Njord0/BNPYC ~/Library/Application Support/Binary Ninja/plugins/BNPyc
 </details>
@@ -31,7 +31,7 @@ Clone this repository and install requirements :
 Then install requirements with pip :
 ```shell
 cd BNPyc/
-python3 -m pip install -r requirements
+python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
