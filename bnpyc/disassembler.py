@@ -23,7 +23,11 @@ class Disassembler:
             return False
 
         self.bv = cv.getCurrentBinaryView()
-        return self.bv != None
+            
+        if self.bv is None:
+            return False
+
+        return self.bv.session_data.get('pycinfos') != None # is it the right bv ?
 
 
     def get_opcodes(self) -> object:
