@@ -38,15 +38,14 @@ class PycView(BinaryView):
         self.str_objects = []
         self._loads_objects(self.pycinfo.co)
 
-        data = self._get_view()
+        self.data = self._get_view()
 
-        BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
+        BinaryView.__init__(self, file_metadata = self.data.file, parent_view = self.data)
         self.platform = Architecture['Python-bytecode'].standalone_platform
-        self.data = data
 
 
     def _set_tmpfile(self) -> None:
-        self.tmpfile = tempfile.NamedTemporaryFile('r+b') # read write binary mode
+        self.tmpfile = tempfile.NamedTemporaryFile('r+b', delete=False) # read write binary mode
         self.tmpfile.write(self.pycinfo.co.co_code)
         self.tmpfile.flush()
         self.funcs = [("", 0), ] # first function offset
@@ -65,14 +64,13 @@ class PycView(BinaryView):
         self.add_auto_section("code", 0 , self.code_size, SectionSemantics.ReadOnlyCodeSectionSemantics)
         
         self.add_auto_segment(self.code_size,
-            len(self.data) - self.code_size,
+            self.data.length - self.code_size,
             self.code_size,
-            len(self.data) - self.code_size, SegmentFlag.SegmentReadable
+            self.data.length - self.code_size, SegmentFlag.SegmentReadable
         )
 
-        self.tmpfile.seek(0)
         for name, offset in self.funcs:
-            func = self.create_user_function(offset)
+            func = self.create_user_function(offset, self.platform)
             func.name = name if name else func.name
 
         ## Adding objects
@@ -154,6 +152,10 @@ class PycView(BinaryView):
     """
     def _is_code(self, c: object) -> bool:
         return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, CodeType)
+
+
+    def perform_get_address_size(self) -> int:
+        return 8
 
 
 class ObjectRenderer(DataRenderer):
