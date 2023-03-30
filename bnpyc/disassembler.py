@@ -166,20 +166,17 @@ class Disassembler:
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
-        elif opname == 'JUMP_FORWARD':
         elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
-        elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
         elif opname == 'JUMP_FORWARD':
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
         elif opname == 'FOR_ITER':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
         elif opname == 'SETUP_FINALLY':
             return InstructionTextToken(
