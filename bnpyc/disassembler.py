@@ -56,26 +56,36 @@ class Disassembler:
 
     def add_jump_branchs(self, i_info: InstructionInfo, data: bytes, addr: int) -> InstructionInfo:
         opcode = data[0]
+        base = self._base_of(addr) # we need to add the "base_address" of the function for absolutes jumps
+
         if self.opcodes.opname[opcode] == 'JUMP_ABSOLUTE':
-            i_info.add_branch(BranchType.UnconditionalBranch, target=data[1])
-        
-        elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
-            i_info.add_branch(BranchType.UnconditionalBranch, target=addr+data[1]*2)
-        
+            i_info.add_branch(BranchType.UnconditionalBranch, target=data[1] + base)
+
         elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=addr+2)
-            i_info.add_branch(BranchType.FalseBranch, target=data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=data[1] + base)
 
         elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
-            i_info.add_branch(BranchType.TrueBranch, target=data[1])
+            i_info.add_branch(BranchType.TrueBranch, target=data[1] + base)
             i_info.add_branch(BranchType.FalseBranch, target=addr+2)
+        
+        elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
+            i_info.add_branch(BranchType.UnconditionalBranch, target=addr + 2 + data[1])
         
         elif self.opcodes.opname[opcode] == 'FOR_ITER':
             i_info.add_branch(BranchType.TrueBranch, addr+2)
-            i_info.add_branch(BranchType.FalseBranch, addr + data[1])
+            i_info.add_branch(BranchType.FalseBranch, addr + 2 + data[1])
         
         elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
             i_info.add_branch(BranchType.FunctionReturn)
+
+        elif self.opcodes.opname[opcode] == 'SETUP_LOOP':
+            i_info.add_branch(BranchType.TrueBranch, target=addr+2)
+            i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
+
+        elif self.opcodes.opname[opcode] == 'SETUP_WITH':
+            i_info.add_branch(BranchType.TrueBranch, target=addr + 2)
+            i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
 
         return i_info
 
@@ -89,7 +99,6 @@ class Disassembler:
         tokens = []
         opcode = data[0]
         opname = self.opcodes.opname[opcode]
-
         tokens.append(
             InstructionTextToken(InstructionTextTokenType.InstructionToken, opname)
         )
@@ -150,6 +159,7 @@ class Disassembler:
 
     def add_jump(self, data: bytes, addr: int) -> InstructionTextToken:
         opname = self.opcodes.opname[data[0]]
+        base = self._base_of(addr) # we need to add the "base_address" of the function for absolutes jumps
         x = data[1]
 
         if opname == 'JUMP_ABSOLUTE':
@@ -157,12 +167,15 @@ class Disassembler:
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
         elif opname == 'JUMP_FORWARD':
-            return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
-            )
         elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
+            )
+        elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
+        elif opname == 'JUMP_FORWARD':
+            return InstructionTextToken(
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
         elif opname == 'FOR_ITER':
             return InstructionTextToken(
@@ -170,10 +183,18 @@ class Disassembler:
             )
         elif opname == 'SETUP_FINALLY':
             return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
+            )
+        elif opname == 'SETUP_LOOP':
+            return InstructionTextToken(
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
+            )
+        elif opname == 'SETUP_WITH':
+            return InstructionTextToken(
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
 
-        return None # should not occur
+        raise Exception(f'Not handled OPCODE : {opname}')
 
 
     def add_const(self, data: bytes, addr: int) -> Tuple[InstructionTextToken]:
@@ -239,8 +260,17 @@ class Disassembler:
             for addr_range in f.address_ranges:
                 if addr in addr_range:
                     return i
-
         raise Exception('no no no')
+
+    def _base_of(self, addr: int) -> int:
+        previous = 0
+        base = 0
+        for f in self.bv.session_data['functions']:
+            base = f[1]
+            if addr < base:
+                return previous
+            previous = base
+        return base
 
 
     def get_nop(self) -> bytes:

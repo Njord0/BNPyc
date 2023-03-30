@@ -1,7 +1,6 @@
 from binaryninja import BinaryView, Architecture, SegmentFlag, SectionSemantics, StructureBuilder, Type, DataRenderer, InstructionTextToken, InstructionTextTokenType, TypeLibrary, DisassemblyTextLine, log_info
 
-from xdis import Code38, Code3, load_module
-from types import CodeType
+from xdis import Code38, Code3, Code2, load_module
 import xdis
 
 from typing import NamedTuple, Tuple, List, Any
@@ -59,6 +58,7 @@ class PycView(BinaryView):
         self.session_data['pycinfos'] = [self.pycinfo, ]
         self.session_data['pycinfos'].extend(self.tmp)
         self.session_data['opcodes'] = xdis.get_opcode(self.pycinfo.version, self.pycinfo.is_pypy)
+        self.session_data['functions'] = self.funcs
 
         self.add_auto_segment(0, self.code_size, 0, self.code_size, SegmentFlag.SegmentContainsCode)
         self.add_auto_section("code", 0 , self.code_size, SectionSemantics.ReadOnlyCodeSectionSemantics)
@@ -151,7 +151,7 @@ class PycView(BinaryView):
     Returns true if is code
     """
     def _is_code(self, c: object) -> bool:
-        return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, CodeType)
+        return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, Code2)
 
 
     def perform_get_address_size(self) -> int:
