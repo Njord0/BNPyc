@@ -76,16 +76,25 @@ class Disassembler:
             i_info.add_branch(BranchType.TrueBranch, addr+2)
             i_info.add_branch(BranchType.FalseBranch, addr + 2 + data[1])
         
-        elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
-            i_info.add_branch(BranchType.FunctionReturn)
-
         elif self.opcodes.opname[opcode] == 'SETUP_LOOP':
             i_info.add_branch(BranchType.TrueBranch, target=addr+2)
             i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
 
-        elif self.opcodes.opname[opcode] == 'SETUP_WITH':
+        elif self.opcodes.opname[opcode] in ('SETUP_WITH', 'SETUP_ASYNC_WITH'):
             i_info.add_branch(BranchType.TrueBranch, target=addr + 2)
             i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
+
+        elif self.opcodes.opname[opcode] == 'SETUP_FINALLY':
+            i_info.add_branch(BranchType.TrueBranch, target=addr + 2)
+            i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
+        
+        elif self.opcodes.opname[opcode] == 'CALL_FINALLY': # 3.8 specific
+            i_info.add_branch(BranchType.TrueBranch, target=addr + 2)
+            i_info.add_branch(BranchType.FalseBranch, target=addr + 2 + data[1])
+
+        elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
+            i_info.add_branch(BranchType.FunctionReturn)
+
 
         return i_info
 
@@ -178,15 +187,19 @@ class Disassembler:
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
-        elif opname == 'SETUP_FINALLY':
-            return InstructionTextToken(
-                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
-            )
         elif opname == 'SETUP_LOOP':
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
-        elif opname == 'SETUP_WITH':
+        elif opname in ('SETUP_WITH', 'SETUP_ASYNC_WITH'):
+            return InstructionTextToken(
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
+            )
+        elif opname == 'SETUP_FINALLY':
+            return InstructionTextToken(
+                InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
+            )
+        elif opname == 'CALL_FINALLY':
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x + addr)}', x + addr + 2
             )
