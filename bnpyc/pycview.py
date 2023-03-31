@@ -1,4 +1,4 @@
-from binaryninja import BinaryView, Architecture, SegmentFlag, SectionSemantics, StructureBuilder, Type, DataRenderer, InstructionTextToken, InstructionTextTokenType, TypeLibrary, DisassemblyTextLine, log_info
+from binaryninja import BinaryView, Architecture, SegmentFlag, SectionSemantics, StructureBuilder, Type, DataRenderer, InstructionTextToken, InstructionTextTokenType, DisassemblyTextLine, Platform, log_info
 
 from xdis import Code38, Code3, Code2, load_module
 import xdis
@@ -40,8 +40,9 @@ class PycView(BinaryView):
         self.data = self._get_view()
 
         BinaryView.__init__(self, file_metadata = self.data.file, parent_view = self.data)
-        self.platform = Architecture['Python-bytecode'].standalone_platform
+        self.platform = PycView.get_platform(self.pycinfo.version[:2])
 
+        log_info(f'[BNPyc] Using architecture {self.platform}')
 
     def _set_tmpfile(self) -> None:
         self.tmpfile = tempfile.NamedTemporaryFile('r+b', delete=False) # read write binary mode
@@ -153,6 +154,24 @@ class PycView(BinaryView):
     def _is_code(self, c: object) -> bool:
         return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, Code2)
 
+    @staticmethod
+    def get_platform(version: Tuple[int, int]) -> Platform:
+        if version >= (3, 6):
+            return Architecture['Python-bytecode'].standalone_platform
+        if version == (3, 5):
+            return Architecture['Python-bytecode35'].standalone_platform
+        if version == (3, 4):
+            return Architecture['Python-bytecode34'].standalone_platform
+        if version == (3, 3):
+            return Architecture['Python-bytecode33'].standalone_platform
+        if version == (3, 2):
+            return Architecture['Python-bytecode32'].standalone_platform
+        if version == (3, 1):
+            return Architecture['Python-bytecode31'].standalone_platform
+        if version == (3, 0):
+            return Architecture['Python-bytecode30'].standalone_platform
+
+        raise Exception('Unsupported bytecode version !')
 
     def perform_get_address_size(self) -> int:
         return 8
