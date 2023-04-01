@@ -4,7 +4,7 @@
     Binary ninja plugin for python bytecode (pyc) disassembly and analysis.<br/><br/>
 </div>
 
-Python versions between 3.6.0 and 3.10 are supported, more to come!
+Python versions from 3.0 to 3.10 are supported!
 
 ## Installation
 
@@ -27,7 +27,7 @@ Clone this repository and install requirements :
     
     git clone https://github.com/Njord0/BNPYC ~/Library/Application Support/Binary Ninja/plugins/BNPyc
 </details>
-
+<br>
 Then install requirements with pip :
 ```shell
 cd BNPyc/
@@ -38,21 +38,13 @@ python3 -m pip install -r requirements.txt
 
 Choose any `.pyc` file and open it with binary ninja.
 
-![](images/pycview1.png)
-
-Example with a simple pyc file, doing a for loop and a print using a f-string.
+<img src="images/pycview1.png" alt="pycview1.png">
+<p align="center">Example with a simple for loop</p>
 
 ## Features
 
-- Recursive functions detections and analysis
-- Convert to nop / Never branch / Invert branch patches
-- Branchs annotations 
-- co_consts / co_names / co_varnames annotations
-- Comparisons annotations (COMPARE_OP)
+- Recursive functions detections and disassembly
+- Branchs annotations
+- Comparisons annotations
+- Inlined `co_consts` `co_names` `co_varnames`
 - Objects mapping
-
-## Screenshots
-
-![objects_list](images/pycview_objects.png)
-
-![functions_list](images/pycview_functions.png)
