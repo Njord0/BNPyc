@@ -67,7 +67,15 @@ class Disassembler:
         elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=data[1] + base)
             i_info.add_branch(BranchType.FalseBranch, target=next_i)
-        
+
+        elif self.opcodes.opname[opcode] == 'JUMP_IF_FALSE':
+                i_info.add_branch(BranchType.TrueBranch, target=next_i)
+                i_info.add_branch(BranchType.FalseBranch, target=data[1] + next_i)
+
+        elif self.opcodes.opname[opcode] == 'JUMP_IF_TRUE':
+            i_info.add_branch(BranchType.TrueBranch, target=data[1] + next_i)
+            i_info.add_branch(BranchType.FalseBranch, target=next_i)
+
         elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
             i_info.add_branch(BranchType.UnconditionalBranch, target=next_i + data[1])
         
@@ -183,7 +191,7 @@ class Disassembler:
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
-        elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
+        elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP', 'JUMP_IF_TRUE', 'JUMP_IF_FALSE'):
             return InstructionTextToken(
                 InstructionTextTokenType.AddressDisplayToken, f' {hex(x)}', x
             )
