@@ -25,6 +25,6 @@
        "Windows": "Clone this repository into `%APPDATA%/Binary Ninja/plugins/`",
        "Linux": "Clone this repository into `~/.binaryninja/plugins/`"
     },
-    "version": "1.0.0",
+    "version": "1.0.2",
     "minimumbinaryninjaversion": 2170
 }
