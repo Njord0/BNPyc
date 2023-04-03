@@ -313,9 +313,12 @@ class Disassembler35(Disassembler):
         i_info = InstructionInfo()
         i_info.length = 1
 
-        if data[0] in set(self.opcodes.hasjabs + self.opcodes.hasjrel + [self.opcodes.RETURN_VALUE, ]):
+        if data[0] in set(self.opcodes.hasjabs + self.opcodes.hasjrel):
             i_info = self.add_jump_branchs(i_info, data, addr)
             i_info.length = self.jump_instruction_length
+        
+        elif data[0] == self.opcodes.RETURN_VALUE:
+            i_info = self.add_jump_branchs(i_info, data, addr)
 
         if data[0] >= self.opcodes.HAVE_ARGUMENT:
             i_info.length = 3
