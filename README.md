@@ -5,6 +5,7 @@
 </div>
 
 Python versions from 3.0 to 3.10 are supported!
+> IL Lifting is not implemented yet, as a result ILs are not available.
 
 ## Installation
 
@@ -28,6 +29,7 @@ Clone this repository and install requirements :
     git clone https://github.com/Njord0/BNPYC ~/Library/Application Support/Binary Ninja/plugins/BNPyc
 </details>
 <br>
+
 Then install requirements with pip :
 ```shell
 cd BNPyc/
