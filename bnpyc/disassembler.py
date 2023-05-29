@@ -15,7 +15,7 @@ class Disassembler:
         self.jump_instruction_length = 2
 
 
-    def set_bv(self) -> bool:    
+    def set_bv(self) -> bool:
         ac = UIContext.activeContext()
         if ac is None:
             ac = UIContext.allContexts()[0]
@@ -24,8 +24,11 @@ class Disassembler:
         if cv is None:
             return False
 
-        self.bv = cv.getCurrentBinaryView()
-            
+        try:
+            self.bv = cv.getCurrentBinaryView()
+        except TypeError:
+            return False
+
         if self.bv is None:
             return False
 
@@ -38,6 +41,7 @@ class Disassembler:
         
         self.pycinfos: List[PycInfo] = self.bv.session_data['pycinfos']
         self.opcodes = self.bv.session_data['opcodes']
+        self.extended_args = self.bv.session_data['extended_args']
 
 
     def disasm(self, data: bytes, addr: int) -> InstructionInfo:
@@ -49,6 +53,9 @@ class Disassembler:
         if data[0] in set(self.opcodes.hasjabs + self.opcodes.hasjrel + [self.opcodes.RETURN_VALUE, ]):
             i_info = self.add_jump_branchs(i_info, data, addr)
 
+        elif self.opcodes.opname[data[0]] == 'EXTENDED_ARG':
+            self.extended_args[addr] = data[1]
+
         return i_info
 
 
@@ -57,51 +64,55 @@ class Disassembler:
         base = self._base_of(addr) # we need to add the "base_address" of the function for absolutes jumps
         next_i = addr + self.jump_instruction_length
 
+        value = self.get_value(data, addr)
+        if self.has_extended_arg(addr) and self.pycinfos[0].version >= (3, 8, 0):
+            value *= 2
+
         if self.opcodes.opname[opcode] == 'JUMP_ABSOLUTE':
-            i_info.add_branch(BranchType.UnconditionalBranch, target=data[1] + base)
+            i_info.add_branch(BranchType.UnconditionalBranch, target=value + base)
 
         elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=data[1] + base)
+            i_info.add_branch(BranchType.FalseBranch, target=value + base)
 
         elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
-            i_info.add_branch(BranchType.TrueBranch, target=data[1] + base)
+            i_info.add_branch(BranchType.TrueBranch, target=value + base)
             i_info.add_branch(BranchType.FalseBranch, target=next_i)
 
         elif self.opcodes.opname[opcode] == 'JUMP_IF_FALSE':
                 i_info.add_branch(BranchType.TrueBranch, target=next_i)
-                i_info.add_branch(BranchType.FalseBranch, target=data[1] + next_i)
+                i_info.add_branch(BranchType.FalseBranch, target=value + next_i)
 
         elif self.opcodes.opname[opcode] == 'JUMP_IF_TRUE':
-            i_info.add_branch(BranchType.TrueBranch, target=data[1] + next_i)
+            i_info.add_branch(BranchType.TrueBranch, target=value + next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i)
 
         elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
-            i_info.add_branch(BranchType.UnconditionalBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.UnconditionalBranch, target=next_i + value)
         
         elif self.opcodes.opname[opcode] == 'FOR_ITER':
             i_info.add_branch(BranchType.TrueBranch, next_i)
-            i_info.add_branch(BranchType.FalseBranch, next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, next_i + value)
         
         elif self.opcodes.opname[opcode] == 'SETUP_LOOP':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
         elif self.opcodes.opname[opcode] in ('SETUP_WITH', 'SETUP_ASYNC_WITH'):
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
         elif self.opcodes.opname[opcode] == 'SETUP_FINALLY':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
         
         elif self.opcodes.opname[opcode] == 'CALL_FINALLY': # 3.8 specific
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
         elif self.opcodes.opname[opcode] == 'SETUP_EXCEPT':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
-            i_info.add_branch(BranchType.FalseBranch, target=next_i + data[1])
+            i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
         elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
             i_info.add_branch(BranchType.FunctionReturn)
@@ -109,7 +120,6 @@ class Disassembler:
 
         return i_info
 
-    ### Instruction text
 
     def get_instruction_text(self, data: bytes, addr: int) -> Tuple[List[InstructionTextToken], int]:
         instruction = self.disasm(data, addr)
@@ -137,7 +147,9 @@ class Disassembler:
         )
 
         if opcode in self.opcodes.hasname:
-            value = self.get_name_at(data[1], addr)
+            x = self.get_value(data, addr)
+            value = self.get_name_at(x, addr)
+
             if (opname == 'LOAD_NAME' or opname == 'LOAD_GLOBAL') and len(self.bv.get_functions_by_name(value)) != 0:
                 self.loaded_function_names.append(value)
             elif opname == 'LOAD_METHOD':
@@ -153,11 +165,12 @@ class Disassembler:
             )
 
         elif opcode in [self.opcodes.LOAD_FAST, self.opcodes.STORE_FAST, self.opcodes.DELETE_FAST]:
+            x = self.get_value(data, addr)
             try:
-                value = self.get_varname_at(data[1], addr)
+                value = self.get_varname_at(x, addr)
             except IndexError:
                 x = self._index_of(addr) + 1
-                value = self.pycinfos[x].co.co_varnames[data[1]]
+                value = self.pycinfos[x].co.co_varnames[x]
 
             tokens.append(
                 InstructionTextToken(InstructionTextTokenType.CharacterConstantToken, value)
@@ -167,6 +180,12 @@ class Disassembler:
             op = self.opcodes.cmp_op[data[1]]
             tokens.append(
                 InstructionTextToken(InstructionTextTokenType.KeywordToken, ' ' + op)
+            )
+
+        elif opcode == self.opcodes.EXTENDED_ARG:
+            op = data[1]
+            tokens.append(
+                InstructionTextToken(InstructionTextTokenType.IntegerToken, ' ' + hex(op))
             )
 
         if opname in ('CALL_FUNCTION', 'CALL_FUNCTION_EX', 'CALL_FUNCTION_KW', 'CALL_METHOD') and self.loaded_function_names:
@@ -184,8 +203,11 @@ class Disassembler:
 
     def add_jump(self, data: bytes, addr: int) -> InstructionTextToken:
         opname = self.opcodes.opname[data[0]]
-        x = data[1]
         next_i = addr + self.jump_instruction_length
+
+        x = self.get_value(data, addr)
+        if self.has_extended_arg(addr) and self.pycinfos[0].version >= (3, 8, 0):
+            x *= 2           
 
         if opname == 'JUMP_ABSOLUTE':
             return InstructionTextToken(
@@ -204,9 +226,29 @@ class Disassembler:
 
         raise Exception(f'Not handled OPCODE : {opname}')
 
+    def has_extended_arg(self, addr: int) -> bool:
+        """Check if the previous instruction has extended arg"""
+        return (addr-2) in self.extended_args.keys()
+
+
+    def get_extended_value(self, addr: int) -> int:
+        """Get the EXTENDED_ARG value of instruction at addr"""
+        if not self.has_extended_arg(addr):
+            return 0
+
+        return self.extended_args[addr - 2] + self.get_extended_value(addr - 2) << 8
+
+    def get_value(self, data: bytes, addr: int) -> int:
+        """Get the value + EXTENDED_ARG for the instruction at addr"""
+        if not self.has_extended_arg(addr):
+            return data[1]
+
+        return data[1] + self.get_extended_value(addr)
 
     def add_const(self, data: bytes, addr: int) -> Tuple[InstructionTextToken]:
-        value = self.get_const_at(data[1], addr)
+        x = self.get_value(data, addr)
+
+        value = self.get_const_at(x, addr)
 
         if isinstance(value, int):
             return InstructionTextToken(
@@ -246,6 +288,9 @@ class Disassembler:
     """
     def get_name_at(self, index: int, addr: int) -> str:
         x = self._index_of(addr)
+        if x == -1:
+            return ''
+
         return self.pycinfos[x].co.co_names[index]
     
     """
@@ -253,6 +298,9 @@ class Disassembler:
     """
     def get_const_at(self, index: int, addr: int) -> object:
         x = self._index_of(addr)
+        if x == -1:
+            return ''
+
         return self.pycinfos[x].co.co_consts[index]
 
     """
@@ -260,6 +308,9 @@ class Disassembler:
     """
     def get_varname_at(self, index: int, addr: int) -> str:
         x = self._index_of(addr)
+        if x == -1:
+            return ''
+
         return self.pycinfos[x].co.co_varnames[index]
 
 
@@ -268,7 +319,7 @@ class Disassembler:
             for addr_range in f.address_ranges:
                 if addr in addr_range:
                     return i
-        raise Exception('no no no')
+        return -1
 
     def _base_of(self, addr: int) -> int:
         previous = 0

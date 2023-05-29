@@ -60,6 +60,7 @@ class PycView(BinaryView):
         self.session_data['pycinfos'].extend(self.tmp)
         self.session_data['opcodes'] = xdis.get_opcode(self.pycinfo.version, self.pycinfo.is_pypy)
         self.session_data['functions'] = self.funcs
+        self.session_data['extended_args'] = {}
 
         self.add_auto_segment(0, self.code_size, 0, self.code_size, SegmentFlag.SegmentContainsCode)
         self.add_auto_section("code", 0 , self.code_size, SectionSemantics.ReadOnlyCodeSectionSemantics)
