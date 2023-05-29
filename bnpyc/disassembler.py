@@ -225,26 +225,7 @@ class Disassembler:
             )
 
         raise Exception(f'Not handled OPCODE : {opname}')
-
-    def has_extended_arg(self, addr: int) -> bool:
-        """Check if the previous instruction has extended arg"""
-        return (addr-2) in self.extended_args.keys()
-
-
-    def get_extended_value(self, addr: int) -> int:
-        """Get the EXTENDED_ARG value of instruction at addr"""
-        if not self.has_extended_arg(addr):
-            return 0
-
-        return self.extended_args[addr - 2] + self.get_extended_value(addr - 2) << 8
-
-    def get_value(self, data: bytes, addr: int) -> int:
-        """Get the value + EXTENDED_ARG for the instruction at addr"""
-        if not self.has_extended_arg(addr):
-            return data[1]
-
-        return data[1] + self.get_extended_value(addr)
-
+    
     def add_const(self, data: bytes, addr: int) -> Tuple[InstructionTextToken]:
         x = self.get_value(data, addr)
 
@@ -283,30 +264,46 @@ class Disassembler:
             InstructionTextTokenType.IntegerToken, f'{{{data[1]}}}'
         )
 
-    """
-    Recovers co.co_names[i] according to the function in which the opcode is
-    """
+    def has_extended_arg(self, addr: int) -> bool:
+        """Check if the previous instruction has extended arg"""
+        return (addr-2) in self.extended_args.keys()
+
+
+    def get_extended_value(self, addr: int) -> int:
+        """Get the EXTENDED_ARG value of instruction at addr"""
+        if not self.has_extended_arg(addr):
+            return 0
+
+        return self.extended_args[addr - 2] + self.get_extended_value(addr - 2) << 8
+
+    def get_value(self, data: bytes, addr: int) -> int:
+        """Get the value + EXTENDED_ARG for the instruction at addr"""
+        if not self.has_extended_arg(addr):
+            return data[1]
+
+        return data[1] + self.get_extended_value(addr)
+
+
     def get_name_at(self, index: int, addr: int) -> str:
+        """Recovers co.co_names[i] according to the function in which the opcode is"""
         x = self._index_of(addr)
         if x == -1:
             return ''
 
         return self.pycinfos[x].co.co_names[index]
     
-    """
-    Recovers co.co_consts[i] according to the function in which the opcode is
-    """
+
     def get_const_at(self, index: int, addr: int) -> object:
+        """Recovers co.co_consts[i] according to the function in which the opcode is"""
         x = self._index_of(addr)
         if x == -1:
             return ''
 
         return self.pycinfos[x].co.co_consts[index]
 
-    """
-    Recovers co.co_consts[i] according to the function in which the opcode is
-    """
+
     def get_varname_at(self, index: int, addr: int) -> str:
+        """Recovers co.co_varnames[i] according to the function in which the opcode is"""
         x = self._index_of(addr)
         if x == -1:
             return ''
