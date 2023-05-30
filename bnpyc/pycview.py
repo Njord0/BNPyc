@@ -29,6 +29,8 @@ class PycView(BinaryView):
     def __init__(self, data):
         self.pycinfo = PycInfo(*load_module(data.file.original_filename, {}))
 
+        original_filename = data.file.original_filename
+
         self._set_tmpfile()
         self.tmp = self._check_others_functions(self.pycinfo.co)
         self.code_size = self.tmpfile.tell()
@@ -41,6 +43,7 @@ class PycView(BinaryView):
 
         BinaryView.__init__(self, file_metadata = self.data.file, parent_view = self.data)
         self.platform = PycView.get_platform(self.pycinfo.version[:2])
+        self.session_data['filename'] = original_filename
 
         log_info(f'[BNPyc] Using architecture {self.platform}')
 
