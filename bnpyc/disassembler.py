@@ -61,6 +61,7 @@ class Disassembler:
 
     def add_jump_branchs(self, i_info: InstructionInfo, data: bytes, addr: int) -> InstructionInfo:
         opcode = data[0]
+        opname = self.opcodes.opname[opcode]
         base = self._base_of(addr) # we need to add the "base_address" of the function for absolutes jumps
         next_i = addr + self.jump_instruction_length
 
@@ -68,53 +69,53 @@ class Disassembler:
         if self.has_extended_arg(addr) and self.pycinfos[0].version >= (3, 8, 0):
             value *= 2
 
-        if self.opcodes.opname[opcode] == 'JUMP_ABSOLUTE':
+        if opname == 'JUMP_ABSOLUTE':
             i_info.add_branch(BranchType.UnconditionalBranch, target=value + base)
 
-        elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
+        elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=value + base)
 
-        elif self.opcodes.opname[opcode] in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
+        elif opname in ('POP_JUMP_IF_TRUE', 'JUMP_IF_TRUE_OR_POP'):
             i_info.add_branch(BranchType.TrueBranch, target=value + base)
             i_info.add_branch(BranchType.FalseBranch, target=next_i)
 
-        elif self.opcodes.opname[opcode] == 'JUMP_IF_FALSE':
+        elif opname == 'JUMP_IF_FALSE':
                 i_info.add_branch(BranchType.TrueBranch, target=next_i)
                 i_info.add_branch(BranchType.FalseBranch, target=value + next_i)
 
-        elif self.opcodes.opname[opcode] == 'JUMP_IF_TRUE':
+        elif opname == 'JUMP_IF_TRUE':
             i_info.add_branch(BranchType.TrueBranch, target=value + next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i)
 
-        elif self.opcodes.opname[opcode] == 'JUMP_FORWARD':
+        elif opname == 'JUMP_FORWARD':
             i_info.add_branch(BranchType.UnconditionalBranch, target=next_i + value)
         
-        elif self.opcodes.opname[opcode] == 'FOR_ITER':
+        elif opname == 'FOR_ITER':
             i_info.add_branch(BranchType.TrueBranch, next_i)
             i_info.add_branch(BranchType.FalseBranch, next_i + value)
         
-        elif self.opcodes.opname[opcode] == 'SETUP_LOOP':
+        elif opname == 'SETUP_LOOP':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
-        elif self.opcodes.opname[opcode] in ('SETUP_WITH', 'SETUP_ASYNC_WITH'):
+        elif opname in ('SETUP_WITH', 'SETUP_ASYNC_WITH'):
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
-        elif self.opcodes.opname[opcode] == 'SETUP_FINALLY':
+        elif opname == 'SETUP_FINALLY':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
         
-        elif self.opcodes.opname[opcode] == 'CALL_FINALLY': # 3.8 specific
+        elif opname == 'CALL_FINALLY': # 3.8 specific
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
-        elif self.opcodes.opname[opcode] == 'SETUP_EXCEPT':
+        elif opname == 'SETUP_EXCEPT':
             i_info.add_branch(BranchType.TrueBranch, target=next_i)
             i_info.add_branch(BranchType.FalseBranch, target=next_i + value)
 
-        elif self.opcodes.opname[opcode] == 'RETURN_VALUE':
+        elif opname == 'RETURN_VALUE':
             i_info.add_branch(BranchType.FunctionReturn)
 
 

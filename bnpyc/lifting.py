@@ -10,7 +10,7 @@ class Lifter:
         self.bv: BinaryView = None
 
 
-    def set_bv(self) -> bool:    
+    def set_bv(self) -> bool:
         ac = UIContext.activeContext()
         if ac is None:
             ac = UIContext.allContexts()[0]
@@ -19,8 +19,15 @@ class Lifter:
         if cv is None:
             return False
 
-        self.bv = cv.getCurrentBinaryView()
-        return self.bv != None
+        try:
+            self.bv = cv.getCurrentBinaryView()
+        except TypeError:
+            return False
+
+        if self.bv is None:
+            return False
+
+        return self.bv.session_data.get('pycinfos') != None # is it the right bv ?
 
 
     def get_opcodes(self) -> object:
