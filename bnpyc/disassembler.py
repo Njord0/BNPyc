@@ -69,7 +69,10 @@ class Disassembler:
         if self.has_extended_arg(addr) and self.pycinfos[0].version >= (3, 8, 0):
             value *= 2
 
-        if opname == 'JUMP_ABSOLUTE':
+        if self.add_jump_branchs_311(i_info, data, addr, value):
+            return i_info # the instructions was already handled as a python 3.11 specific instruction
+
+        elif opname == 'JUMP_ABSOLUTE':
             i_info.add_branch(BranchType.UnconditionalBranch, target=value + base)
 
         elif opname in ('POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP'):
@@ -120,7 +123,54 @@ class Disassembler:
 
 
         return i_info
+    
+    def add_jump_branchs_311(self, i_info: InstructionInfo, data: bytes, addr: int, value: int) -> bool:
+        """Handles python 3.11 specific opcodes
+        Returns true if an instruction was handled, false otherwise 
+        """
+        opcode = data[0]
+        opname = self.opcodes.opname[opcode]
+        base = self._base_of(addr) # we need to add the "base_address" of the function for absolutes jumps
+        next_i = addr + self.jump_instruction_length
 
+        # see : https://docs.python.org/3/library/dis.html#opcode-JUMP_BACKWARD
+        if opname in ('JUMP_BACKWARD', 'JUMP_BACKWARD_NO_INTERRUPT'):
+            i_info.add_branch(BranchType.UnconditionalBranch, addr - value)
+        
+        if opname == 'POP_JUMP_FORWARD_IF_TRUE':
+            i_info.add_branch(BranchType.TrueBranch, next_i + value)
+            i_info.add_branch(BranchType.FalseBranch, next_i)
+        elif opname == 'POP_JUMP_BACKWARD_IF_TRUE':
+            i_info.add_branch(BranchType.TrueBranch, addr - value)
+            i_info.add_branch(BranchType.FalseBranch, next_i)
+        elif opname == 'POP_JUMP_FORWARD_IF_FALSE':
+            i_info.add_branch(BranchType.TrueBranch, next_i)
+            i_info.add_branch(BranchType.FalseBranch, addr + value)
+        elif opname == 'POP_JUMP_BACKWARD_IF_FALSE':
+            i_info.add_branch(BranchType.TrueBranch, next_i)
+            i_info.add_branch(BranchType.FalseBranch, addr - value)
+        elif opname == 'POP_JUMP_FORWARD_IF_NOT_NONE':
+            i_info.add_branch(BranchType.TrueBranch, addr + value)
+            i_info.add_branch(BranchType.FalseBranch, next_i)
+        elif opname == 'POP_JUMP_BACKWARD_IF_NOT_NONE':
+            i_info.add_branch(BranchType.TrueBranch, addr - value)
+            i_info.add_branch(BranchType.FalseBranch, next_i)
+        elif opname == 'POP_JUMP_FORWARD_IF_NONE':
+            i_info.add_branch(BranchType.TrueBranch, next_i)
+            i_info.add_branch(BranchType.FalseBranch, addr + value)
+        elif opname == 'POP_JUMP_BACKWARD_IF_NONE':
+            i_info.add_branch(BranchType.TrueBranch, next_i)
+            i_info.add_branch(BranchType.FalseBranch, addr - value)
+        elif opname == 'JUMP_IF_TRUE_OR_POP': # changed in version 3.11
+            i_info.add_branch(BranchType.TrueBranch, addr + value)
+            i_info.add_branch(BranchType.FalseBranch, next_i)
+        elif opname == 'JUMP_IF_FALSE_OR_POP': # changed in version 3.11
+            i_info.add_branch(BranchType.TrueBranch, next_i)
+            i_info.add_branch(BranchType.FalseBranch, addr + value)
+        else:
+            return False
+
+        return True
 
     def get_instruction_text(self, data: bytes, addr: int) -> Tuple[List[InstructionTextToken], int]:
         instruction = self.disasm(data, addr)
@@ -279,6 +329,9 @@ class Disassembler:
 
     def get_value(self, data: bytes, addr: int) -> int:
         """Get the value + EXTENDED_ARG for the instruction at addr"""
+        if len(data) < 2:
+            return 0
+
         if not self.has_extended_arg(addr):
             return data[1]
 
