@@ -3,6 +3,7 @@ from binaryninja import BinaryView, Architecture, SegmentFlag, SectionSemantics,
 from xdis import Code38, Code3, Code2, load_module
 import xdis
 
+from types import CodeType
 from typing import NamedTuple, Tuple, List, Any
 import tempfile
 
@@ -156,7 +157,7 @@ class PycView(BinaryView):
     Returns true if is code
     """
     def _is_code(self, c: object) -> bool:
-        return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, Code2)
+        return isinstance(c, (Code38, Code3, Code2, CodeType))
 
     @staticmethod
     def get_platform(version: Tuple[int, int]) -> Platform:
