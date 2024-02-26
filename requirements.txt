@@ -1,1 +1,2 @@
 xdis
+pygments
