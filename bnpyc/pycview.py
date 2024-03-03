@@ -3,8 +3,12 @@ from binaryninja import BinaryView, Architecture, SegmentFlag, SectionSemantics,
 from xdis import Code38, Code3, Code2, load_module
 import xdis
 
+from .objects import ObjectKind
+
+from types import CodeType
 from typing import NamedTuple, Tuple, List, Any
 import tempfile
+import struct
 
 class PycInfo(NamedTuple):
     version: Tuple[int, int, int] = None
@@ -83,6 +87,7 @@ class PycView(BinaryView):
             object_info.packed = True
             object_info.append(Type.array(Type.char(), 50), 'name')
             object_info.append(Type.array(Type.char(), 50), 'value')
+            object_info.append(Type.int(4), 'kind')
         ObjectType = Type.structure_type(object_info)
 
         for offset in self.str_objects:
@@ -102,18 +107,19 @@ class PycView(BinaryView):
             self.tmpfile.write(
                 self._build_object(name)
             )
-            self.data_begin += 100
+            self.data_begin += 104
 
         for c in code.co_consts:
             if self._is_code(c):
                 recur.append(c)
+                continue
 
             self.str_objects.append(self.data_begin)
 
             self.tmpfile.write(
                 self._build_object(c)
             )
-            self.data_begin += 100
+            self.data_begin += 104
 
         for c in recur:
             self._loads_objects(c)
@@ -150,13 +156,23 @@ class PycView(BinaryView):
 
         data += str_value
 
-        return data.encode()
+        if isinstance(obj, str):
+            return data.encode() + struct.pack('<i', ObjectKind.STRING)
+        if isinstance(obj, int):
+            return data.encode() + struct.pack('<i', ObjectKind.INTEGER)
+        if isinstance(obj, float):
+            return data.encode() + struct.pack('<i', ObjectKind.FLOAT)
+        if obj is None:
+            return data.encode() + struct.pack('<i', ObjectKind.NONE)
+
+        return data.encode() + struct.pack('<i', ObjectKind.ANY)
+
 
     """
     Returns true if is code
     """
     def _is_code(self, c: object) -> bool:
-        return isinstance(c, Code38) or isinstance(c, Code3) or isinstance(c, Code2)
+        return isinstance(c, (Code38, Code3, Code2, CodeType))
 
     @staticmethod
     def get_platform(version: Tuple[int, int]) -> Platform:
@@ -181,30 +197,4 @@ class PycView(BinaryView):
         return 8
 
 
-class ObjectRenderer(DataRenderer):
-    def perform_is_valid_for_data(self, ctxt, view: BinaryView, addr: int, type, context):
-        try:
-            var = view.get_data_var_at(addr)
-            return var.name == 'PythonObject'
-        except:
-            return False
 
-    def perform_get_lines_for_data(self, ctxt, view: BinaryView, addr: int, type, prefix, width, context):
-        tokens = []
-        var = view.get_data_var_at(addr)
-
-        tokens.append(
-            InstructionTextToken(InstructionTextTokenType.StringToken, 'object ')
-        )
-
-        tokens.append(
-            InstructionTextToken(InstructionTextTokenType.TypeNameToken, var.value['name'] + b' ')
-        )
-        value = var.value['value']
-        tokens.append(
-            InstructionTextToken(InstructionTextTokenType.CharacterConstantToken, value)
-        )
-
-        return [DisassemblyTextLine(tokens, addr)]
-
-ObjectRenderer().register_type_specific()

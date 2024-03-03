@@ -3,7 +3,7 @@ from binaryninjaui import WidgetPane
 
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QTextEdit, QVBoxLayout, QWidget, QComboBox
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QTextEdit, QVBoxLayout, QWidget, QComboBox, QMessageBox
 from PySide6.QtGui import QColor, QPalette
 
 from pygments.lexers import PythonLexer
@@ -72,6 +72,12 @@ class DecompilerWidget(QWidget):
         
         if shutil.which('uncompyle6'):
             self.select_decompiler.addItem('uncompyle6')
+        
+        if self.select_decompiler.count() == 0:
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle('BNyc')
+            msg_box.setText('No decompilers available, check your path!')
+            msg_box.exec()
 
         self.select_decompiler.currentIndexChanged.connect(self.update_code)
 
@@ -91,13 +97,19 @@ class DecompilerWidget(QWidget):
     def get_code(self) -> Optional[str]:
         """try to decompile the pyc file """
         decompiler = self.select_decompiler.currentText()
-        
-        proc = subprocess.Popen([decompiler, self.bv.session_data['filename']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if proc.wait() != 0:
+
+        if not decompiler:
             return None
+        try:
+            proc = subprocess.Popen([decompiler, self.bv.session_data['filename']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if proc.wait() != 0:
+                return None
+            return proc.stdout.read().decode()
 
-        return proc.stdout.read().decode()
-
+        except OSError:
+            return None
+        finally:
+            return None
 
     @staticmethod
     def create_widget(context):
